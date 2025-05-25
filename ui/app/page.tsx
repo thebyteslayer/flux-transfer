@@ -2,14 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import Button from '../components/button';
-import HeaderWrapper from '../components/header-wrapper';
+import Header from '../components/header';
 
 export default function Home() {
   const router = useRouter();
 
   return (
     <div className="min-h-screen bg-white">
-      <HeaderWrapper />
+      <Header />
       {/* Main content */}
       <div className="p-8" style={{ paddingTop: '72px' }}>
         <div className="max-w-4xl mx-auto text-center">
@@ -19,9 +19,9 @@ export default function Home() {
             color: 'black',
             marginBottom: '2rem'
           }}>
-            Welcome to Flux Transfer
+            Welcome to Transfer
           </h1>
-          
+
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <Button onClick={() => router.push('/transfer')}>
               Transfer

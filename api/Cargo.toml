@@ -1,8 +1,8 @@
 [package]
-name = "flux-transfer"
+name = "transfer"
 version = "0.1.0"
 edition = "2024"
-authors = ["The Flux Contributors"]
+authors = ["The Transfer Contributors"]
 description = "A secure, simple and local File Transfer Protocol"
 
 [dependencies]

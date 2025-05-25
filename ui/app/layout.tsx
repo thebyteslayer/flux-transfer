@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flux Transfer",
+      title: "Transfer",
   description: "A secure, simple and local File Transfer Protocol",
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({
       >
         {/* <HeaderWrapper /> */}
         <div style={{ paddingTop: '0px' }}>
-          {children}
+        {children}
         </div>
       </body>
     </html>

@@ -90,20 +90,26 @@ impl Config {
             // No config file exists, create default
             Config::default()
         };
-        
-        // Update bind with detected public IP on every startup
-        if let Ok(public_ip) = crate::ip::detect_public_ip() {
-            config.bind = public_ip;
-        }
-        
-        // Always save the config to ensure it's up to date and any missing fields are added
-        config.save_to_path(&config_path)?;
             
-        Ok(config)
+        // Update bind with detected public IP on every startup
+            if let Ok(public_ip) = crate::ip::detect_public_ip() {
+                config.bind = public_ip;
+            }
+            
+        // Always save the config to ensure it's up to date and any missing fields are added
+            config.save_to_path(&config_path)?;
+            
+            Ok(config)
     }
 
     /// Helper method to save config to a specific path
     fn save_to_path(&self, path: &Path) -> Result<()> {
+        // Ensure the parent directory exists
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+        }
+        
         let toml_content = toml::to_string(self)
             .context("Failed to serialize config to TOML")?;
             

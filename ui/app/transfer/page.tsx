@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import HeaderWrapper from '../../components/header-wrapper';
+import Header from '../../components/header';
 import Button from '../../components/button';
 
 interface TransferForm {
@@ -46,7 +46,7 @@ export default function TransferPage() {
       try {
         const saved = document.cookie
           .split('; ')
-          .find(row => row.startsWith('flux_destinations='))
+          .find(row => row.startsWith('destinations='))
           ?.split('=')[1];
         
         if (saved) {
@@ -196,7 +196,7 @@ export default function TransferPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <HeaderWrapper />
+      <Header />
       <div className="p-8" style={{ paddingTop: '72px' }}>
         <div className="max-w-2xl mx-auto">
         {/* Header */}

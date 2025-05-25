@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import HeaderWrapper from '../../../../components/header-wrapper';
+import Header from '../../../../components/header';
 import Button from '../../../../components/button';
 
 interface DestinationForm {
@@ -41,7 +41,7 @@ export default function EditDestinationPage() {
     try {
       const saved = document.cookie
         .split('; ')
-        .find(row => row.startsWith('flux_destinations='))
+        .find(row => row.startsWith('destinations='))
         ?.split('=')[1];
       
       if (saved) {
@@ -82,7 +82,7 @@ export default function EditDestinationPage() {
       // Load existing destinations from cookies
       const existingCookie = document.cookie
         .split('; ')
-        .find(row => row.startsWith('flux_destinations='))
+        .find(row => row.startsWith('destinations='))
         ?.split('=')[1];
       
       let destinations: Destination[] = [];
@@ -100,7 +100,7 @@ export default function EditDestinationPage() {
       // Save to cookies (expires in 365 days)
       const expires = new Date();
       expires.setDate(expires.getDate() + 365);
-      document.cookie = `flux_destinations=${encodeURIComponent(JSON.stringify(updatedDestinations))}; expires=${expires.toUTCString()}; path=/`;
+      document.cookie = `destinations=${encodeURIComponent(JSON.stringify(updatedDestinations))}; expires=${expires.toUTCString()}; path=/`;
 
       // Navigate back to destinations page
       router.push('/destinations');
@@ -116,7 +116,7 @@ export default function EditDestinationPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <HeaderWrapper />
+      <Header />
       <div className="p-8" style={{ paddingTop: '72px' }}>
         <div className="max-w-2xl mx-auto">
         {/* Header */}

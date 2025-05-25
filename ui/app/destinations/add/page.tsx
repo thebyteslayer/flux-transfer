@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import HeaderWrapper from '../../../components/header-wrapper';
+import Header from '../../../components/header';
 import Button from '../../../components/button';
 
 interface DestinationForm {
@@ -51,7 +51,7 @@ export default function AddDestinationPage() {
       // Load existing destinations from cookies
       const existingCookie = document.cookie
         .split('; ')
-        .find(row => row.startsWith('flux_destinations='))
+        .find(row => row.startsWith('destinations='))
         ?.split('=')[1];
       
       let destinations: Destination[] = [];
@@ -80,7 +80,7 @@ export default function AddDestinationPage() {
       // Save to cookies (expires in 365 days)
       const expires = new Date();
       expires.setDate(expires.getDate() + 365);
-      document.cookie = `flux_destinations=${encodeURIComponent(JSON.stringify(destinations))}; expires=${expires.toUTCString()}; path=/`;
+      document.cookie = `destinations=${encodeURIComponent(JSON.stringify(destinations))}; expires=${expires.toUTCString()}; path=/`;
 
       // Reset form
       setForm({
@@ -102,7 +102,7 @@ export default function AddDestinationPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <HeaderWrapper />
+      <Header />
       <div className="p-8" style={{ paddingTop: '72px' }}>
         <div className="max-w-2xl mx-auto">
         {/* Header */}

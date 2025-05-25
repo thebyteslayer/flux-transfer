@@ -36,7 +36,7 @@ fn create_windows_directories() -> Result<()> {
             .with_context(|| format!("Failed to create C:/transfer directory: {:?}", c_transfer))?;
     }
     
-    // Create AppData/.flux/transfer directory (for config file)
+    // Create AppData/.transfer directory (for config file)
     let config_dir = get_config_directory()?;
     if !config_dir.exists() {
         fs::create_dir_all(&config_dir)
@@ -52,18 +52,18 @@ pub fn get_config_directory() -> Result<PathBuf> {
     
     let config_path = match os {
         "windows" => {
-            // Windows: %APPDATA%/Roaming/.flux/transfer
+            // Windows: %APPDATA%/Roaming/.transfer
             let appdata = env::var("APPDATA")
                 .context("Failed to get APPDATA environment variable")?;
-            PathBuf::from(appdata).join(".flux").join("transfer")
+            PathBuf::from(appdata).join(".transfer")
         }
         "linux" => {
-            // Linux: ~/.local/share/.flux/transfer (to be implemented)
+            // Linux: ~/.local/share/.transfer (to be implemented)
             // For now, we'll use a placeholder that won't be created
             PathBuf::from("/opt/transfer")
         }
         "macos" => {
-            // macOS: ~/Library/Application Support/.flux/transfer (to be implemented)
+            // macOS: ~/Library/Application Support/.transfer (to be implemented)
             // For now, we'll use a placeholder that won't be created
             PathBuf::from("/Users/Shared/transfer")
         }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import HeaderWrapper from '../../components/header-wrapper';
+import Header from '../../components/header';
 import Button from '../../components/button';
 
 interface Destination {
@@ -26,7 +26,7 @@ export default function DestinationsPage() {
     try {
       const saved = document.cookie
         .split('; ')
-        .find(row => row.startsWith('flux_destinations='))
+        .find(row => row.startsWith('destinations='))
         ?.split('=')[1];
       
       if (saved) {
@@ -42,7 +42,7 @@ export default function DestinationsPage() {
     try {
       const expires = new Date();
       expires.setDate(expires.getDate() + 365);
-      document.cookie = `flux_destinations=${encodeURIComponent(JSON.stringify(updatedDestinations))}; expires=${expires.toUTCString()}; path=/`;
+      document.cookie = `destinations=${encodeURIComponent(JSON.stringify(updatedDestinations))}; expires=${expires.toUTCString()}; path=/`;
       setDestinations(updatedDestinations);
     } catch (error) {
       console.error('Error saving destinations:', error);
@@ -60,7 +60,7 @@ export default function DestinationsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <HeaderWrapper />
+      <Header />
       <div className="p-8" style={{ paddingTop: '72px' }}>
         <div className="max-w-4xl mx-auto">
         {/* Header */}

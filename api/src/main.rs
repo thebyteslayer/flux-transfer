@@ -27,11 +27,11 @@ async fn main() -> Result<()> {
             .with_context(|| format!("Failed to create transfer directory: {}", transfer_dir.display()))?;
     }
     
-    println!("Flux Transfer running on {}:{}", config.bind, config.port);
+    println!("Transfer running on {}:{}", config.bind, config.port);
     info!("Transfer ID: {}", config.transfer_id);
     
     // Start the transfer protocol server
     api::start_tcp_server(&config.bind, config.port).await?;
-
+    
     Ok(())
 } 

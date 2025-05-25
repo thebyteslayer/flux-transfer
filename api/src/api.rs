@@ -62,10 +62,10 @@ async fn handle_tcp_connection(mut stream: TcpStream) -> Result<()> {
         
         // Send response back to client (unless it was a file transfer)
         if !response.is_empty() {
-            stream.write_all(response.as_bytes()).await
-                .context("Failed to write response to TCP stream")?;
-            stream.write_all(b"\n").await
-                .context("Failed to write newline to TCP stream")?;
+        stream.write_all(response.as_bytes()).await
+            .context("Failed to write response to TCP stream")?;
+        stream.write_all(b"\n").await
+            .context("Failed to write newline to TCP stream")?;
         }
     }
     
@@ -101,7 +101,7 @@ async fn parse_and_handle_command(command: &str, stream: &mut TcpStream) -> Resu
             // Check if the last part looks like a folder (no file extension)
             let potential_folder = &rest[last_space + 1..];
             let potential_filename = &rest[..last_space];
-            
+    
             // If the potential folder doesn't contain a dot, treat it as a folder
             // Otherwise, treat the entire rest as filename
             if !potential_folder.contains('.') && !potential_folder.is_empty() {
@@ -147,7 +147,7 @@ async fn handle_transfer_command(transfer_id: &str, filename: &str, folder: Opti
     // Check size limits before sending ACK
     if let Err(e) = check_size_limits(&config, file_size, &receive_dir).await {
         error!("Size limit exceeded: {}", e);
-        
+    
         // Send error response instead of ACK
         let error_msg = if e.to_string().contains("File size") {
             format!("FILE_SIZE_LIMIT_EXCEEDED: {}", e)
@@ -157,9 +157,9 @@ async fn handle_transfer_command(transfer_id: &str, filename: &str, folder: Opti
         
         stream.write_all(error_msg.as_bytes()).await
             .context("Failed to send error response")?;
-        stream.write_all(b"\n").await
-            .context("Failed to send newline")?;
-        
+    stream.write_all(b"\n").await
+        .context("Failed to send newline")?;
+    
         return Err(e);
     }
     
@@ -173,14 +173,14 @@ async fn handle_transfer_command(transfer_id: &str, filename: &str, folder: Opti
             info!("Successfully received file: {}", received_filename);
             
             Ok(format!("TRANSFER_COMPLETE: {}", received_filename))
-        }
-        Err(e) => {
+                }
+                Err(e) => {
             error!("Failed to receive file: {}", e);
             
             Err(e)
+                }
+            }
         }
-    }
-}
 
 /// Generate a unique filename if the original already exists
 async fn generate_unique_filename(transfer_dir: &PathBuf, filename: &str) -> String {
@@ -211,7 +211,7 @@ async fn generate_unique_filename(transfer_dir: &PathBuf, filename: &str) -> Str
         }
         
         counter += 1;
-        
+    
         // Safety check to prevent infinite loop
         if counter > 9999 {
             // Fallback to timestamp-based naming
@@ -225,8 +225,8 @@ async fn generate_unique_filename(transfer_dir: &PathBuf, filename: &str) -> Str
             } else {
                 format!("{}{}", stem, timestamp)
             };
+            }
         }
-    }
 }
 
 /// Receive file data from TCP stream when size is already known

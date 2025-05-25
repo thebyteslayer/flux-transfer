@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -41,14 +43,14 @@ export default function Header() {
       >
         {/* Logo on the left */}
         <Link href="/" style={{ cursor: 'pointer' }}>
-          <img 
-            src="/flux-light-transparent.png" 
-            alt="Flux Transfer" 
-            style={{ 
-              height: '24px',
-              width: 'auto'
-            }} 
-          />
+          <span style={{
+            fontSize: '18px',
+            fontWeight: 'bold',
+            color: 'black',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+          }}>
+            Transfer
+          </span>
         </Link>
 
         {/* Navigation in the center */}
