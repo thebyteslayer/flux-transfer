@@ -74,21 +74,47 @@ async fn handle_tcp_connection(mut stream: TcpStream) -> Result<()> {
 
 /// Parse and handle the custom TRANSFER command
 async fn parse_and_handle_command(command: &str, stream: &mut TcpStream) -> Result<String> {
-    let parts: Vec<&str> = command.split_whitespace().collect();
+    let command = command.trim();
     
-    if parts.is_empty() {
+    if command.is_empty() {
         return Err(anyhow::anyhow!("Empty command"));
     }
     
-    match parts[0].to_uppercase().as_str() {
-        "TRANSFER" => {
-            if parts.len() < 3 || parts.len() > 4 {
-                return Err(anyhow::anyhow!("TRANSFER command usage: TRANSFER <transfer_id> <file> [<folder>]"));
+    // Check if it starts with TRANSFER
+    if !command.to_uppercase().starts_with("TRANSFER ") {
+        let first_word = command.split_whitespace().next().unwrap_or("");
+        return Err(anyhow::anyhow!("Unknown command: {}. Available commands: TRANSFER", first_word));
+    }
+    
+    // Remove "TRANSFER " prefix (8 characters)
+    let remaining = &command[8..].trim();
+    
+    // Find the first space to separate transfer_id from the rest
+    if let Some(first_space) = remaining.find(' ') {
+        let transfer_id = &remaining[..first_space];
+        let rest = &remaining[first_space + 1..].trim();
+        
+        // Find the last space to separate folder from filename (if folder exists)
+        // We assume that if there are multiple spaces, the last "word" is the folder
+        // and everything before it is the filename
+        if let Some(last_space) = rest.rfind(' ') {
+            // Check if the last part looks like a folder (no file extension)
+            let potential_folder = &rest[last_space + 1..];
+            let potential_filename = &rest[..last_space];
+            
+            // If the potential folder doesn't contain a dot, treat it as a folder
+            // Otherwise, treat the entire rest as filename
+            if !potential_folder.contains('.') && !potential_folder.is_empty() {
+                handle_transfer_command(transfer_id, potential_filename, Some(potential_folder), stream).await
+            } else {
+                handle_transfer_command(transfer_id, rest, None, stream).await
             }
-            let folder = if parts.len() == 4 { Some(parts[3]) } else { None };
-            handle_transfer_command(parts[1], parts[2], folder, stream).await
+        } else {
+            // No additional spaces, so it's just filename
+            handle_transfer_command(transfer_id, rest, None, stream).await
         }
-        _ => Err(anyhow::anyhow!("Unknown command: {}. Available commands: TRANSFER", parts[0])),
+    } else {
+        return Err(anyhow::anyhow!("TRANSFER command usage: TRANSFER <transfer_id> <file> [<folder>]"));
     }
 }
 
@@ -156,6 +182,53 @@ async fn handle_transfer_command(transfer_id: &str, filename: &str, folder: Opti
     }
 }
 
+/// Generate a unique filename if the original already exists
+async fn generate_unique_filename(transfer_dir: &PathBuf, filename: &str) -> String {
+    let file_path = transfer_dir.join(filename);
+    
+    // If file doesn't exist, use original name
+    if !tokio::fs::try_exists(&file_path).await.unwrap_or(false) {
+        return filename.to_string();
+    }
+    
+    // Split filename into name and extension
+    let path = std::path::Path::new(filename);
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or(filename);
+    let extension = path.extension().and_then(|s| s.to_str());
+    
+    // Try incrementing numbers until we find a unique name
+    let mut counter = 1;
+    loop {
+        let new_filename = if let Some(ext) = extension {
+            format!("{}{}.{}", stem, counter, ext)
+        } else {
+            format!("{}{}", stem, counter)
+        };
+        
+        let new_file_path = transfer_dir.join(&new_filename);
+        if !tokio::fs::try_exists(&new_file_path).await.unwrap_or(false) {
+            return new_filename;
+        }
+        
+        counter += 1;
+        
+        // Safety check to prevent infinite loop
+        if counter > 9999 {
+            // Fallback to timestamp-based naming
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            
+            return if let Some(ext) = extension {
+                format!("{}{}.{}", stem, timestamp, ext)
+            } else {
+                format!("{}{}", stem, timestamp)
+            };
+        }
+    }
+}
+
 /// Receive file data from TCP stream when size is already known
 async fn receive_file_data_with_size(stream: &mut TcpStream, transfer_dir: &PathBuf, filename: &str, file_size: usize) -> Result<String> {
     info!("Receiving file: {} ({} bytes)", filename, file_size);
@@ -165,12 +238,17 @@ async fn receive_file_data_with_size(stream: &mut TcpStream, transfer_dir: &Path
     stream.read_exact(&mut file_data).await
         .context("Failed to read file data")?;
     
+    // Generate unique filename if original already exists
+    let unique_filename = generate_unique_filename(transfer_dir, filename).await;
+    let file_path = transfer_dir.join(&unique_filename);
+    
+    info!("Saving file as: {}", unique_filename);
+    
     // Save file to the received directory
-    let file_path = transfer_dir.join(filename);
     tokio::fs::write(&file_path, &file_data).await
         .with_context(|| format!("Failed to write file: {}", file_path.display()))?;
     
-    Ok(filename.to_string())
+    Ok(unique_filename)
 }
 
 /// Calculate the total size of all files in a directory

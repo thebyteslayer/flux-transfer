@@ -105,9 +105,9 @@ export default function DestinationsPage() {
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#dc2626';
+                      e.currentTarget.style.backgroundColor = 'black';
                       e.currentTarget.style.color = 'white';
-                      e.currentTarget.style.border = '1px solid #dc2626';
+                      e.currentTarget.style.border = '1px solid #6b7280';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '#fca5a5';

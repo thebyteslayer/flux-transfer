@@ -30,7 +30,10 @@ export default function TransferPage() {
     folder: ''
   });
   const [isTransferring, setIsTransferring] = useState(false);
+  const [isTransferred, setIsTransferred] = useState(false);
   const [transferStatus, setTransferStatus] = useState<string>('');
+  const [transferProgress, setTransferProgress] = useState({ completed: 0, total: 0 });
+  const [showProgress, setShowProgress] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<string>('Custom');
   const [savedDestinations, setSavedDestinations] = useState<Destination[]>([]);
   const [selectFolders, setSelectFolders] = useState(false);
@@ -63,6 +66,9 @@ export default function TransferPage() {
       ...prev,
       [field]: value
     }));
+    // Reset transferred state when form changes
+    setIsTransferred(false);
+    setShowProgress(false);
   };
 
   const handleDestinationChange = (destinationName: string) => {
@@ -102,6 +108,9 @@ export default function TransferPage() {
       ...prev,
       files
     }));
+    // Reset transferred state when files change
+    setIsTransferred(false);
+    setShowProgress(false);
   };
 
   const isFormValid = () => {
@@ -115,46 +124,71 @@ export default function TransferPage() {
     if (!isFormValid() || form.files.length === 0) return;
 
     setIsTransferring(true);
+    setShowProgress(true);
+    setTransferProgress({ completed: 0, total: form.files.length });
 
     try {
-      // Prepare form data for the transfer
-      const formData = new FormData();
+      let successfulTransfers = 0;
       
-      // Append all files
-      form.files.forEach((file, index) => {
-        formData.append(`file_${index}`, file);
-      });
-      
-      formData.append('fileCount', form.files.length.toString());
-      formData.append('ip', form.ip);
-      formData.append('port', form.port);
-      formData.append('transferId', form.id);
-      if (form.folder.trim()) {
-        formData.append('folder', form.folder.trim());
+      // Transfer files one by one to update progress in real-time
+      for (let i = 0; i < form.files.length; i++) {
+        const file = form.files[i];
+        
+        // Prepare form data for single file transfer
+        const formData = new FormData();
+        formData.append('file_0', file);
+        formData.append('fileCount', '1');
+        formData.append('ip', form.ip);
+        formData.append('port', form.port);
+        formData.append('transferId', form.id);
+        if (form.folder.trim()) {
+          formData.append('folder', form.folder.trim());
+        }
+
+        try {
+          // Send single file to bridge server
+          const response = await fetch('/api/transfer', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          
+          if (result.success) {
+            successfulTransfers++;
+          } else {
+            console.error(`Transfer failed for file ${file.name}:`, result.message || result.error);
+          }
+          
+          // Update progress after each file
+          setTransferProgress({ completed: successfulTransfers, total: form.files.length });
+          
+        } catch (error) {
+          console.error(`Error transferring file ${file.name}:`, error);
+          // Continue with next file even if this one failed
+        }
       }
-
-      // Send files to bridge server which will handle TCP communication
-      const response = await fetch('/api/transfer', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       
-      // Only navigate back to homepage if transfer was successful
-      if (result.success) {
-        router.push('/');
+      // Only navigate back to homepage if all transfers were successful
+      if (successfulTransfers === form.files.length) {
+        setIsTransferred(true);
+        // Wait 2 seconds to show the "Transferred" state before navigating
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
       } else {
-        // Handle transfer failure - could show error message here
-        console.error('Transfer failed:', result.message || result.error);
+        // Handle partial failure - stay on page
+        console.error(`Only ${successfulTransfers}/${form.files.length} files transferred successfully`);
       }
 
     } catch (error) {
       console.error('Transfer error:', error);
+      // Show current progress on error
+      setTransferProgress(prev => ({ ...prev }));
     } finally {
       setIsTransferring(false);
     }
@@ -292,13 +326,41 @@ export default function TransferPage() {
 
           {/* Transfer Button */}
           <div>
-            <Button 
+            <button
               onClick={handleTransfer}
-              disabled={!isFormValid() || isTransferring}
-              fullWidth={true}
+              disabled={!isFormValid() || isTransferring || isTransferred}
+              style={{
+                width: '100%',
+                padding: '4px 12px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: (!isFormValid() || isTransferring || isTransferred) ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                outline: 'none',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+                backgroundColor: isTransferred ? '#bbf7d0' : isTransferring ? '#bfdbfe' : (!isFormValid() ? '#fca5a5' : 'black'),
+                color: isTransferred ? '#065f46' : isTransferring ? '#1e40af' : (!isFormValid() ? '#dc2626' : 'white'),
+                border: isTransferred ? '1px solid #065f46' : isTransferring ? '1px solid #1e40af' : (!isFormValid() ? '1px solid #dc2626' : '1px solid #6b7280'),
+              }}
             >
-              {isTransferring ? 'Transferring...' : 'Transfer'}
-            </Button>
+              {isTransferred ? 'Transferred' : isTransferring ? 'Transferring...' : 'Transfer'}
+            </button>
+            
+
+            
+            {/* Transfer Progress */}
+            {showProgress && (
+              <div style={{
+                marginTop: '8px',
+                textAlign: 'center',
+                fontSize: '14px',
+                color: '#6b7280',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+              }}>
+                {transferProgress.completed}/{transferProgress.total} files transferred
+              </div>
+            )}
           </div>
 
 
