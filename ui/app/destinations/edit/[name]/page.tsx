@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import HeaderWrapper from '../../../components/header-wrapper';
-import Button from '../../../components/button';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import HeaderWrapper from '../../../../components/header-wrapper';
+import Button from '../../../../components/button';
 
 interface DestinationForm {
   name: string;
@@ -20,15 +19,47 @@ interface Destination {
   id: string;
 }
 
-export default function AddDestinationPage() {
+export default function EditDestinationPage() {
   const [form, setForm] = useState<DestinationForm>({
     name: '',
     ip: '',
     port: '',
     id: ''
   });
-  const [status, setStatus] = useState<string>('');
   const router = useRouter();
+  const params = useParams();
+  const destinationName = params.name as string;
+
+  // Load destination data on component mount
+  useEffect(() => {
+    if (destinationName) {
+      loadDestination(decodeURIComponent(destinationName));
+    }
+  }, [destinationName]);
+
+  const loadDestination = (name: string) => {
+    try {
+      const saved = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('flux_destinations='))
+        ?.split('=')[1];
+      
+      if (saved) {
+        const destinations: Destination[] = JSON.parse(decodeURIComponent(saved));
+        const destination = destinations.find(d => d.name === name);
+        if (destination) {
+          setForm({
+            name: destination.name,
+            ip: destination.ip,
+            port: destination.port,
+            id: destination.id
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading destination:', error);
+    }
+  };
 
   const handleInputChange = (field: keyof DestinationForm, value: string) => {
     setForm(prev => ({
@@ -44,7 +75,7 @@ export default function AddDestinationPage() {
            form.id.trim() !== '';
   };
 
-  const saveDestination = () => {
+  const handleSave = () => {
     if (!isFormValid()) return;
 
     try {
@@ -59,45 +90,28 @@ export default function AddDestinationPage() {
         destinations = JSON.parse(decodeURIComponent(existingCookie));
       }
 
-      // Check if destination name already exists
-      const existingIndex = destinations.findIndex(d => d.name === form.name);
-      
-      const newDestination: Destination = {
-        name: form.name,
-        ip: form.ip,
-        port: form.port,
-        id: form.id
-      };
-
-      if (existingIndex >= 0) {
-        // Update existing destination
-        destinations[existingIndex] = newDestination;
-      } else {
-        // Add new destination
-        destinations.push(newDestination);
-      }
+      // Update the destination
+      const updatedDestinations = destinations.map(dest => 
+        dest.name === decodeURIComponent(destinationName)
+          ? { ...form }
+          : dest
+      );
 
       // Save to cookies (expires in 365 days)
       const expires = new Date();
       expires.setDate(expires.getDate() + 365);
-      document.cookie = `flux_destinations=${encodeURIComponent(JSON.stringify(destinations))}; expires=${expires.toUTCString()}; path=/`;
+      document.cookie = `flux_destinations=${encodeURIComponent(JSON.stringify(updatedDestinations))}; expires=${expires.toUTCString()}; path=/`;
 
-      // Reset form
-      setForm({
-        name: '',
-        ip: '',
-        port: '',
-        id: ''
-      });
-
-      // Redirect back to destinations page after 2 seconds
-      setTimeout(() => {
-        router.push('/destinations');
-      }, 2000);
+      // Navigate back to destinations page
+      router.push('/destinations');
 
     } catch (error) {
       console.error('Error saving destination:', error);
     }
+  };
+
+  const handleCancel = () => {
+    router.push('/destinations');
   };
 
   return (
@@ -110,11 +124,11 @@ export default function AddDestinationPage() {
           <h1 className="text-3xl font-bold text-black mb-4" style={{
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
           }}>
-            Add Destination
+            Edit Destination
           </h1>
         </div>
 
-        {/* Destination Form */}
+        {/* Edit Form */}
         <div className="space-y-4">
           {/* Name Field */}
           <div>
@@ -172,18 +186,49 @@ export default function AddDestinationPage() {
             />
           </div>
 
-          {/* Add Destination Button */}
-          <div>
-            <Button
-              onClick={saveDestination}
-              disabled={!isFormValid()}
-              fullWidth={true}
-            >
-              Add Destination
-            </Button>
+          {/* Save and Cancel Buttons */}
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <Button
+                onClick={handleSave}
+                disabled={!isFormValid()}
+                fullWidth={true}
+              >
+                Save
+              </Button>
+            </div>
+            <div className="w-1/2">
+              <button
+                onClick={handleCancel}
+                style={{
+                  backgroundColor: '#fca5a5',
+                  color: '#dc2626',
+                  border: '1px solid #dc2626',
+                  padding: '4px 12px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif',
+                  width: '100%'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                  e.currentTarget.style.color = 'white';
+                  e.currentTarget.style.border = '1px solid #dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fca5a5';
+                  e.currentTarget.style.color = '#dc2626';
+                  e.currentTarget.style.border = '1px solid #dc2626';
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
-
-
         </div>
         </div>
       </div>

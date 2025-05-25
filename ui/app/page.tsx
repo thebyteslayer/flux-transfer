@@ -1,71 +1,35 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import ConfigBox from '../components/box.module';
-import Dropdown from '../components/dropdown.module';
+import Button from '../components/button';
+import HeaderWrapper from '../components/header-wrapper';
 
 export default function Home() {
   const router = useRouter();
 
-  const dropdownOptions = [
-    {
-      label: 'Transfer',
-      action: () => router.push('/transfer')
-    },
-    {
-      label: 'Destinations',
-      action: () => router.push('/destinations')
-    },
-    {
-      label: 'Add Destination',
-      action: () => router.push('/destinations/add')
-    },
-    {
-      label: 'Documentation',
-      action: () => alert('Documentation coming soon!')
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-black mb-8">
-            Flux Transfer
+    <div className="min-h-screen bg-white">
+      <HeaderWrapper />
+      {/* Main content */}
+      <div className="p-8" style={{ paddingTop: '72px' }}>
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 style={{
+            fontSize: '3rem',
+            fontWeight: 'bold',
+            color: 'black',
+            marginBottom: '2rem'
+          }}>
+            Welcome to Flux Transfer
           </h1>
           
-          {/* Configuration Info */}
-          <div className="text-left mb-8">
-            <p className="text-gray-700 mb-4">
-              You can find your Transfer ID, your IP and your Port in:
-            </p>
-            <div className="space-y-2">
-              <ConfigBox
-                iconSrc="/windows.png"
-                iconAlt="Windows"
-                path="C:\Users\<username>\AppData\Roaming\.flux\transfer\transfer.toml"
-              />
-              <ConfigBox
-                iconSrc="/linux.png"
-                iconAlt="Linux"
-                path="Coming Soon"
-              />
-              <ConfigBox
-                iconSrc="/macos.png"
-                iconAlt="MacOS"
-                path="Coming Soon"
-              />
-            </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Button onClick={() => router.push('/transfer')}>
+              Transfer
+            </Button>
+            <Button variant="secondary" onClick={() => console.log('Quick Start clicked')}>
+              Quick Start
+            </Button>
           </div>
-          
-                    {/* Dropdown Menu */}
-          <Dropdown 
-            buttonText="Options"
-            options={dropdownOptions}
-          />
         </div>
       </div>
     </div>

@@ -3,12 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import HeaderWrapper from '../../components/header-wrapper';
+import Button from '../../components/button';
 
 interface TransferForm {
   ip: string;
   port: string;
   id: string;
-  file: File | null;
+  files: File[];
   folder: string;
 }
 
@@ -24,13 +26,14 @@ export default function TransferPage() {
     ip: '',
     port: '',
     id: '',
-    file: null,
+    files: [],
     folder: ''
   });
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferStatus, setTransferStatus] = useState<string>('');
   const [selectedDestination, setSelectedDestination] = useState<string>('Custom');
   const [savedDestinations, setSavedDestinations] = useState<Destination[]>([]);
+  const [selectFolders, setSelectFolders] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -71,7 +74,7 @@ export default function TransferPage() {
         ip: '',
         port: '',
         id: '',
-        file: prev.file, // Keep the file
+        files: prev.files, // Keep the files
         folder: prev.folder // Keep the folder
       }));
     } else {
@@ -82,7 +85,7 @@ export default function TransferPage() {
           ip: destination.ip,
           port: destination.port,
           id: destination.id,
-          file: prev.file, // Keep the file
+          files: prev.files, // Keep the files
           folder: prev.folder // Keep the folder
         }));
       }
@@ -94,10 +97,10 @@ export default function TransferPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
+    const files = Array.from(event.target.files || []);
     setForm(prev => ({
       ...prev,
-      file
+      files
     }));
   };
 
@@ -105,19 +108,24 @@ export default function TransferPage() {
     return form.ip.trim() !== '' && 
            form.port.trim() !== '' && 
            form.id.trim() !== '' && 
-           form.file !== null;
+           form.files.length > 0;
   };
 
   const handleTransfer = async () => {
-    if (!isFormValid() || !form.file) return;
+    if (!isFormValid() || form.files.length === 0) return;
 
     setIsTransferring(true);
-    setTransferStatus('Connecting to server...');
 
     try {
       // Prepare form data for the transfer
       const formData = new FormData();
-      formData.append('file', form.file);
+      
+      // Append all files
+      form.files.forEach((file, index) => {
+        formData.append(`file_${index}`, file);
+      });
+      
+      formData.append('fileCount', form.files.length.toString());
       formData.append('ip', form.ip);
       formData.append('port', form.port);
       formData.append('transferId', form.id);
@@ -125,7 +133,7 @@ export default function TransferPage() {
         formData.append('folder', form.folder.trim());
       }
 
-      // Send file to bridge server which will handle TCP communication
+      // Send files to bridge server which will handle TCP communication
       const response = await fetch('/api/transfer', {
         method: 'POST',
         body: formData,
@@ -137,177 +145,164 @@ export default function TransferPage() {
 
       const result = await response.json();
       
+      // Only navigate back to homepage if transfer was successful
       if (result.success) {
-        setTransferStatus('Transfer completed successfully!');
+        router.push('/');
       } else {
-        setTransferStatus(`Transfer failed: ${result.error}`);
+        // Handle transfer failure - could show error message here
+        console.error('Transfer failed:', result.message || result.error);
       }
 
     } catch (error) {
       console.error('Transfer error:', error);
-      setTransferStatus(`Transfer failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsTransferring(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-white">
+      <HeaderWrapper />
+      <div className="p-8" style={{ paddingTop: '72px' }}>
+        <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <Link 
-            href="/"
-            className="text-blue-600 hover:text-blue-700 underline mb-4 inline-block"
-          >
-            ← Back to Home
-          </Link>
-          <h1 className="text-3xl font-bold text-black mb-4">
-            Send File
+          <h1 className="text-3xl font-bold text-black mb-4" style={{
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+          }}>
+            Transfer
           </h1>
         </div>
 
         {/* Transfer Form */}
-        <div className="bg-white border border-gray-300 p-6">
-          <div className="space-y-4">
-            {/* Destination Selector */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">
-                Destination
-              </label>
-              <select
-                value={selectedDestination}
-                onChange={(e) => handleDestinationChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 focus:border-blue-600 outline-none"
-              >
-                <option value="Custom">Custom</option>
-                {savedDestinations.map((dest) => (
-                  <option key={dest.name} value={dest.name}>
-                    {dest.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <div className="space-y-4">
+          {/* Destination Selector */}
+          <div>
+            <select
+              value={selectedDestination}
+              onChange={(e) => handleDestinationChange(e.target.value)}
+              className="w-full px-3 py-1 border border-gray-300 focus:border-black outline-none rounded-lg"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+              }}
+            >
+              <option value="Custom">Custom</option>
+              {savedDestinations.map((dest) => (
+                <option key={dest.name} value={dest.name}>
+                  {dest.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* Conditional Form Fields */}
-            {selectedDestination === 'Custom' && (
-              <>
-                {/* IP Field */}
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1">
-                    IP Address
-                  </label>
-                  <input
-                    type="text"
-                    value={form.ip}
-                    onChange={(e) => handleInputChange('ip', e.target.value)}
-                    placeholder="192.168.1.100"
-                    className="w-full px-3 py-2 border border-gray-300 focus:border-blue-600 outline-none"
-                  />
-                </div>
-
-                {/* Port Field */}
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1">
-                    Port
-                  </label>
-                  <input
-                    type="text"
-                    value={form.port}
-                    onChange={(e) => handleInputChange('port', e.target.value)}
-                    placeholder="8080"
-                    className="w-full px-3 py-2 border border-gray-300 focus:border-blue-600 outline-none"
-                  />
-                </div>
-
-                {/* ID Field */}
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1">
-                    Transfer ID
-                  </label>
-                  <input
-                    type="text"
-                    value={form.id}
-                    onChange={(e) => handleInputChange('id', e.target.value)}
-                    placeholder="transfer-123"
-                    className="w-full px-3 py-2 border border-gray-300 focus:border-blue-600 outline-none"
-                  />
-                </div>
-              </>
-            )}
-
-            {/* File Field (always visible) */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">
-                File
-              </label>
-              <div className="flex gap-2">
+          {/* Conditional Form Fields */}
+          {selectedDestination === 'Custom' && (
+            <>
+              {/* IP Field */}
+              <div>
                 <input
                   type="text"
-                  value={form.file?.name || ''}
-                  readOnly
-                  placeholder="No file selected"
-                  className="flex-1 px-3 py-2 border border-gray-300 bg-gray-50"
+                  value={form.ip}
+                  onChange={(e) => handleInputChange('ip', e.target.value)}
+                  placeholder="IP Address"
+                  className="w-full px-3 py-1 border border-gray-300 focus:border-black outline-none rounded-lg"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+                  }}
                 />
-                <button
-                  type="button"
-                  onClick={handleFileSelect}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 border border-blue-600 hover:border-blue-700 transition-colors duration-200"
-                >
-                  Browse
-                </button>
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-            </div>
 
-            {/* Folder Field (always visible) */}
-            <div>
-              <label className="block text-sm font-medium text-black mb-1">
-                Folder (Optional)
-              </label>
+              {/* Port Field */}
+              <div>
+                <input
+                  type="text"
+                  value={form.port}
+                  onChange={(e) => handleInputChange('port', e.target.value)}
+                  placeholder="Port"
+                  className="w-full px-3 py-1 border border-gray-300 focus:border-black outline-none rounded-lg"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+                  }}
+                />
+              </div>
+
+              {/* ID Field */}
+              <div>
+                <input
+                  type="text"
+                  value={form.id}
+                  onChange={(e) => handleInputChange('id', e.target.value)}
+                  placeholder="Transfer ID"
+                  className="w-full px-3 py-1 border border-gray-300 focus:border-black outline-none rounded-lg"
+                  style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {/* File/Folder Selection */}
+          <div>
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={form.folder}
-                onChange={(e) => handleInputChange('folder', e.target.value)}
-                placeholder="Leave empty for default directory"
-                className="w-full px-3 py-2 border border-gray-300 focus:border-blue-600 outline-none"
+                value={form.files.length === 0 ? '' : form.files.length === 1 ? form.files[0].name : `${form.files.length} files selected`}
+                readOnly
+                placeholder="No files selected"
+                className="w-1/2 px-3 py-1 border border-gray-300 bg-gray-50 rounded-lg"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+                }}
               />
-              <p className="text-xs text-gray-600 mt-1">
-                If specified, file will be saved in a subfolder within the configured transfer directory
-              </p>
+              <button
+                onClick={handleFileSelect}
+                className="w-1/2 px-3 py-1 border border-gray-300 bg-black hover:bg-white text-white hover:text-black rounded-lg transition-colors duration-200"
+                style={{
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+                }}
+              >
+                Browse
+              </button>
             </div>
+            
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </div>
 
-            {/* Transfer Button */}
-            <button
+          {/* Folder Field (always visible) */}
+          <div>
+            <input
+              type="text"
+              value={form.folder}
+              onChange={(e) => handleInputChange('folder', e.target.value)}
+              placeholder="Folder (Optional)"
+              className="w-full px-3 py-1 border border-gray-300 focus:border-black outline-none rounded-lg"
+              style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif'
+              }}
+            />
+          </div>
+
+          {/* Transfer Button */}
+          <div>
+            <Button 
               onClick={handleTransfer}
               disabled={!isFormValid() || isTransferring}
-              className={`w-full py-3 font-medium text-white transition-colors duration-200 ${
-                isFormValid() && !isTransferring
-                  ? 'bg-green-600 hover:bg-green-700 border border-green-600 hover:border-green-700'
-                  : 'bg-gray-400 border border-gray-400 cursor-not-allowed'
-              }`}
+              fullWidth={true}
             >
               {isTransferring ? 'Transferring...' : 'Transfer'}
-            </button>
-
-            {/* Status Message */}
-            {transferStatus && (
-              <div className={`p-3 border ${
-                transferStatus.includes('successfully') 
-                  ? 'border-green-300 bg-green-50 text-green-800' 
-                  : transferStatus.includes('failed') || transferStatus.includes('error')
-                  ? 'border-red-300 bg-red-50 text-red-800'
-                  : 'border-blue-300 bg-blue-50 text-blue-800'
-              }`}>
-                {transferStatus}
-              </div>
-            )}
+            </Button>
           </div>
+
+
+        </div>
         </div>
       </div>
     </div>
